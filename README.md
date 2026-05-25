@@ -1,195 +1,198 @@
-# crewkit — 多角色 Agent 协作开发框架
+# crewkit — Multi-Role Agent Collaboration Framework
 
-> 一个 Claude Code skill，将传统单人 Agent 的"一条龙"拆解为 **Supervisor + PM + 5 个专职 Worker** 的协作流水线。
+> A Claude Code skill that turns the "one agent does everything" anti-pattern into a **Supervisor + PM + 5 specialized Workers** pipeline.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6C4DFF)](https://claude.ai/code)
 
+*[中文文档](README.zh.md)*
+
 ---
 
-## 安装
+## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/crewkit.git
+git clone https://github.com/webster-yuan/crewkit.git
 cd crewkit
 bash install.sh        # macOS / Linux / WSL
-# 或
+# or
 .\install.ps1          # Windows PowerShell
 ```
 
-安装到 `~/.claude/skills/crewkit/` 后即可在任何项目中使用。
+Once installed to `~/.claude/skills/crewkit/`, it's available in any project.
 
-## 快速开始
+## Quick Start
 
-**1. 在项目中初始化 crewkit：**
+**1. Initialize crewkit in your project:**
 
-在 Claude Code 会话中输入：
+In a Claude Code session:
 
 ```
 /crewkit:init
 ```
 
-这会在项目根目录创建 `docs/`、`memory/` 和 `CLAUDE.md` 模板。
+This scaffolds `docs/`, `memory/`, and a `CLAUDE.md` template in your project root.
 
-**2. 描述你的需求：**
+**2. Describe your feature:**
 
 ```
-我想给后台加一个操作日志功能
+I want to add an audit log to the admin panel
 ```
 
-Claude 会自动以 **PM** 角色判断变更级别（S/M/L），按需调动 BA、Architect、UX、Coder、Tester。
+Claude automatically acts as **PM** — judges the change level (S/M/L), dispatches the right workers (BA, Architect, UX, Coder, Tester), and orchestrates the full pipeline.
 
-**3. 你只需在两个节点确认：** 需求文档确认 + 最终验收。中间全部由 PM 自动调度。
+**3. You only step in twice:** confirm the requirements doc + final acceptance. Everything in between is PM-automated.
 
 ---
 
-## 为什么传统单人 Agent 效率低
+## Why Single-Agent Workflows Fail
 
-把需求到交付全压在一个 Agent 身上，会触发 6 个系统性问题：
+Cramming requirements → architecture → code → testing into one agent triggers six systemic problems:
 
-| 问题 | 根因 | 表现 |
-|------|------|------|
-| **上下文过载** | 一个会话塞进需求→架构→编码→测试的全部上下文 | 越往后 LLM 推理质量越差，丢失早期细节 |
-| **角色混淆** | 同一 Agent 一会儿想架构、一会儿写代码、一会儿测功能 | 角色切换时丢失思维深度，架构决策和编码实现互相污染 |
-| **无机构记忆** | 每次新会话从零开始 | 上次调研过的技术约束、踩过的坑全部丢失，重复踩 |
-| **长链衰减** | 从需求到测试几千 token 的推理链 | 链条末端的决策质量远低于开端，测试往往形式化 |
-| **自查盲区** | 同一个人（Agent）审自己的方案 | 架构问题、边界遗漏很难自检，需要外部视角 |
-| **人类瓶颈** | 要么人类盯全程（累），要么完全不盯（失控） | 两个极端之间缺少结构化的人类介入点 |
+| Problem | Root Cause | Symptom |
+|---------|-----------|---------|
+| **Context overload** | One session holds the entire chain's context | LLM reasoning quality degrades the further you go; early details get lost |
+| **Role confusion** | Same agent switches between architect, coder, tester mindsets | Loss of depth on each switch; design decisions and implementation contaminate each other |
+| **No institutional memory** | Every new session starts from scratch | Previously researched constraints and pitfalls are gone — you step on the same rakes |
+| **Long-chain decay** | Thousands of tokens of reasoning chain from requirements to tests | Decision quality at the tail (testing) is far below the head; testing becomes perfunctory |
+| **Self-review blind spot** | Same agent reviews its own plan | Architecture gaps and edge-case omissions are nearly impossible to self-detect |
+| **Human bottleneck** | Either the human watches everything (exhausting) or nothing (loss of control) | No structured intervention points between the two extremes |
 
-### 根本原因
+### Root Cause
 
-**LLM 在长上下文、多角色混合场景下的注意力衰减。** 单个 Agent 在从需求到交付的链条上，每往前推进一步，上下文就膨胀一轮。到了链条后端（编码、测试），Agent 脑子里的"需求原意"已经被前面的推理层层包裹，很容易走偏。
-
----
-
-## crewkit 怎么解决
-
-### 核心思路：分而治之
-
-```
-传统模式:                         crewkit 模式:
-
-单个 Agent                        Supervisor (Human)
-  │                                  │
-  ├── 理解需求 (模糊)                PM (编排中枢)
-  ├── 想架构 (拍脑袋)                │
-  ├── 写代码 (边写边改)              ├── BA        → 需求文档    [聚焦: 澄清+边界]
-  └── 测一下 (走形式)                ├── Architect → 架构文档    [聚焦: 技术+可行]
-                                     ├── UX        → 交互文档    [聚焦: 流转+状态]
-                                     ├── Coder     → 代码        [聚焦: 方案→实现]
-                                     └── Tester    → 测试报告    [聚焦: 独立验证]
-```
-
-**每个 Worker 只处理自己角色范围内的上下文。** BA 不需要知道技术方案，Coder 不需要重新理解需求——他读 BA 的结构化文档。
-
-### 四个核心机制
-
-#### 1. 文档即接口 — 用结构化产出替代原始上下文传递
-
-Worker 之间不传递会话历史，只传递**结构化文档**。一个 500 行的架构文档，是对 Architect 几千行思考链的压缩蒸馏。
-
-```
-需求原文 (自然语言, 模糊)
-    → BA 文档 (结构化的需求规格, ~200行)
-    → Architect 文档 (候选方案+接口定义, ~300行)
-    → UX 文档 (状态矩阵+流转图, ~200行)
-    → Coder 方案 (改动范围+步骤, ~150行)
-    → 代码
-    → Tester 报告 (用例矩阵, ~150行)
-```
-
-每一步都在**提炼和结构化**，而不是简单地把原始上下文往后堆。
-
-#### 2. 角色隔离 — 每个 Worker 有独立的记忆和上下文边界
-
-| 隔离维度 | 机制 |
-|---------|------|
-| **Prompt 隔离** | 每个 Worker 启动时注入角色专属 prompt，定义职责边界和行为约束 |
-| **记忆隔离** | 每个 Worker 有独立的 `memory/roles/<role>.memory.md`，只积累自己领域的知识 |
-| **上下文隔离** | Worker 只读自己的必读文档（≤2 份），不被其他角色的噪音干扰 |
-| **纪律隔离** | "不越界" — Architect 不设计 UI，UX 不决定数据模型，Coder 不做设计决策 |
-
-#### 3. 质量门禁 — 每个交接点有 MUST checklist
-
-每个角色交接处设质量门禁，由一个**不是产出者**的角色执行。Architect 审核 Coder 方案，Tester 独立验证 Coder 代码——交叉审查天然覆盖自查盲区。
-
-#### 4. 跨会话记忆 — 角色知识持续积累
-
-每个 Worker 完成任务后追加更新自己的记忆文件，下次 PM 派发同一角色时自动注入。知识不随会话结束而丢失。
+**LLM attention decay in long-context, multi-role-mixed scenarios.** As a single agent pushes forward on the requirements-to-delivery chain, context inflates at every step. By the time it reaches the back end (coding, testing), the original intent is buried under layers of prior reasoning — drift is inevitable.
 
 ---
 
-## 流程设计：三级分流
+## How crewkit Solves It
+
+### Core Idea: Divide and Conquer
 
 ```
-Supervisor 提需求
+Traditional:                          crewkit:
+
+Single Agent                          Supervisor (Human)
+  │                                      │
+  ├── Understand reqs (vague)            PM (orchestrator)
+  ├── Design arch (off the cuff)         │
+  ├── Write code (trial and error)       ├── BA        → requirements doc  [focus: clarify + bound]
+  └── Test a bit (perfunctory)           ├── Architect → architecture doc  [focus: tech + feasibility]
+                                         ├── UX        → interaction doc   [focus: flows + states]
+                                         ├── Coder     → code              [focus: plan → implement]
+                                         └── Tester    → test report       [focus: independent verify]
+```
+
+**Each Worker only processes context within its role.** BA doesn't need to know the tech stack. Coder doesn't need to re-derive requirements — they read BA's structured spec.
+
+### Four Core Mechanisms
+
+#### 1. Documents as Interfaces — structured artifacts replace raw context passing
+
+Workers don't pass session histories. They pass **structured documents**. A 500-line architecture doc is a compressed distillation of thousands of lines of the Architect's reasoning. The next worker reads the doc, not replays the thought process.
+
+```
+Raw request (natural language, vague)
+    → BA doc (structured spec, ~200 lines)
+    → Architect doc (candidate solutions + interface definitions, ~300 lines)
+    → UX doc (state matrix + flow diagrams, ~200 lines)
+    → Coder plan (change scope + steps, ~150 lines)
+    → Code
+    → Tester report (test case matrix, ~150 lines)
+```
+
+Every step **refines and structures**, rather than blindly appending raw context.
+
+#### 2. Role Isolation — each Worker has independent memory and context boundaries
+
+| Isolation Dimension | Mechanism |
+|--------------------|-----------|
+| **Prompt isolation** | Each Worker injected with role-specific prompt defining scope and behavioral constraints |
+| **Memory isolation** | Each Worker has its own `memory/roles/<role>.memory.md`, accumulating only its domain knowledge |
+| **Context isolation** | Workers read only their required docs (≤2), shielded from other roles' noise |
+| **Discipline isolation** | "Stay in your lane" — Architect doesn't design UI, UX doesn't decide data models, Coder doesn't make design decisions |
+
+#### 3. Quality Gates — MUST checklists at every handoff
+
+Every role handoff has a quality gate, executed by someone who is **not the producer**. Architect reviews Coder's plan. Tester independently verifies Coder's code. Cross-review naturally covers self-review blind spots.
+
+#### 4. Cross-Session Memory — role knowledge compounds
+
+After every task, each Worker appends to its memory file. Next time PM dispatches that role, the last 3 memory entries are injected into the prompt. Knowledge doesn't evaporate when the session ends.
+
+---
+
+## Flow Design: Three-Tier Triage
+
+```
+Supervisor states request
     │
     ▼
-PM 判级 (不改接口/数据模型/流转 → S 级)
+PM grades (no interface/data/flow changes → S-level)
     │
-    ├── S 级 (Bug fix、文案微调)
-    │     PM → Coder 直接改 → PM 自测 (同会话内)
+    ├── S-level (bug fix, copy tweak)
+    │     PM → Coder directly → PM self-test (same session)
     │
-    ├── M 级 (现有模块加功能)
-    │     PM 按需拉 1-2 个角色 → Coder → Tester (2-3 会话)
+    ├── M-level (new feature on existing module)
+    │     PM pulls 1-2 workers → Coder → Tester (2-3 sessions)
     │
-    └── L 级 (全新模块、架构变更)
-          完整 7 阶段流水线: BA → Architect∥UX → Coder+Tester
+    └── L-level (new module, architecture change)
+          Full 7-stage pipeline: BA → Architect∥UX → Coder + Tester
 ```
 
-**小改动不惊动全员**，只有大变更才拉满火力。
+**Small changes don't mobilize the entire team.** Only major changes pull full firepower.
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
-crewkit/                              # ← 这个 repo (skill 源码)
-├── SKILL.md                          # Skill 定义 (Claude Code 入口)
-├── README.md                         # 本文件
-├── install.sh / install.ps1          # 安装脚本
-├── templates/                        # 项目脚手架 (复制到用户项目)
-│   ├── CLAUDE.md                     #   PM 协议参考
-│   ├── docs/                         #   各角色产出模板
-│   │   ├── ba/                       #     BA: 需求文档 + 原型
-│   │   ├── architect/                #     Architect: 架构设计 + 调研 + 审核
-│   │   ├── ux/                       #     UX: 用户交互文档
-│   │   ├── coder/                    #     Coder: 实现方案 + 调试记录
-│   │   ├── tester/                   #     Tester: 测试报告 + E2E
-│   │   └── pm/                       #     PM: 调度协议 + 质量门禁 + 收件箱
-│   └── memory/                       #   跨会话角色记忆系统
-│       ├── roles/                    #     每个 Worker 的知识积累
-│       ├── session/current-state.md  #     会话状态恢复
-│       └── decisions/                #     架构决策记录 (ADR)
+crewkit/                              # ← this repo (skill source)
+├── SKILL.md                          # Skill definition (Claude Code entry point)
+├── README.md                         # This file
+├── README.zh.md                      # Chinese documentation
+├── install.sh / install.ps1          # Install scripts
+├── templates/                        # Project scaffold (copied on /crewkit:init)
+│   ├── CLAUDE.md                     #   PM protocol reference
+│   ├── docs/                         #   Per-role output templates
+│   │   ├── ba/                       #     BA: requirements + prototypes
+│   │   ├── architect/                #     Architect: architecture + research + review
+│   │   ├── ux/                       #     UX: interaction documents
+│   │   ├── coder/                    #     Coder: implementation plans + debug
+│   │   ├── tester/                   #     Tester: test reports + E2E
+│   │   └── pm/                       #     PM: dispatch protocols + quality gates + inbox
+│   └── memory/                       #   Cross-session role memory system
+│       ├── roles/                    #     Per-worker knowledge accumulation
+│       ├── session/current-state.md  #     Session state recovery
+│       └── decisions/                #     Architecture Decision Records (ADR)
 ├── LICENSE                           # MIT
 └── .gitignore
 ```
 
 ---
 
-## 适配任意技术栈
+## Tech-Stack Agnostic
 
-crewkit 是**方法论层**的 skill，不绑定语言和框架：
+crewkit is a **methodology-level** skill. It doesn't bind to any language or framework:
 
-- 前端项目？给 UX + Coder 注入 `frontend-patterns` skill
-- 后端项目？给 Architect 注入 `api-design` + `database-reviewer`
-- 全栈项目？按模块拆，UI 走 M 级 (UX→Coder)，API 走 M 级 (Architect→Coder)
-- 非软件项目（研究报告、内容生产）？保留 BA + PM + Tester，角色换成对应领域
+- Frontend project? Inject `frontend-patterns` skill for UX + Coder
+- Backend project? Inject `api-design` + `database-reviewer` for Architect
+- Full-stack? Split by module — UI goes M-level (UX→Coder), API goes M-level (Architect→Coder)
+- Non-software work (research reports, content production)? Keep BA + PM + Tester, swap the other roles for domain equivalents
 
-核心不变的是：**分角色、文档接口、质量门禁、跨会话记忆**。
+What stays constant: **role separation, documents as interfaces, quality gates, cross-session memory**.
 
 ---
 
-## 贡献
+## Contributing
 
-欢迎提 Issue 和 PR。
+Issues and PRs welcome.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/crewkit.git
+git clone https://github.com/webster-yuan/crewkit.git
 cd crewkit
-# SKILL.md 是主文件，templates/ 是脚手架
+# SKILL.md is the main file, templates/ is the scaffold
 ```
 
 ## License
 
-MIT — 详见 [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
