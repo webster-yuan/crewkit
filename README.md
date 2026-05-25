@@ -183,6 +183,40 @@ What stays constant: **role separation, documents as interfaces, quality gates, 
 
 ---
 
+## How crewkit Differs from CrewAI / Multi-Agent SDKs
+
+crewkit is often compared to **CrewAI** — the leading Python multi-agent framework. They solve different problems:
+
+| | **CrewAI** | **crewkit** |
+|---|-----------|------------|
+| **What it is** | Python SDK — you write code to define agents | Claude Code skill — you talk to it |
+| **Onboarding** | `pip install` + write Python/YAML | `/crewkit:init` then describe your feature |
+| **Agent communication** | In-memory Python objects | Structured markdown documents (traceable, auditable) |
+| **Context management** | No built-in limits | ≤2 required docs per worker (prevents attention decay) |
+| **Quality control** | No built-in gates | MUST checklists at every handoff, reviewed by non-producer |
+| **Human role** | Optional hook | **Structural — Supervisor is the pivot** of the entire workflow |
+| **Cross-session memory** | Task-scoped | File-persisted per-role memory, compounds across sessions |
+| **Task triage** | All tasks run same flow | S/M/L three-tier — small fixes don't mobilize the whole team |
+| **Best for** | Building agent-based applications | Running a disciplined development process with AI agents |
+
+**CrewAI is a library for building agent applications. crewkit is a protocol for running a development team of agents.** They're complementary — you could use crewkit to manage the development of a CrewAI-based app.
+
+---
+
+## Why "Supervisor" Not "Product Owner" or "Tech Lead"
+
+People sometimes wonder: *"Am I the client now? I used to be the developer."*
+
+You're neither. **Supervisor** is a distinct role:
+
+- Not a **client** — this is your project, you're not outsourcing
+- Not a **tech lead** — you don't manage people or write code
+- You're a **decision-maker + quality inspector** — you define what to build (confirm BA doc), verify it's right (final acceptance), and trust the PM to handle everything in between
+
+The depth didn't disappear — it shifted from *execution depth* (I know how to implement this) to *system depth* (I designed a protocol that keeps agents from drifting).
+
+---
+
 ## Contributing
 
 Issues and PRs welcome.
