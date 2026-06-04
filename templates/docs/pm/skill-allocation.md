@@ -72,3 +72,14 @@ benchmark              ← 性能基准测试
 security-review        ← 安全审查
 security-scan          ← 安全扫描
 ```
+
+
+## Debug/Troubleshooting
+
+When the task is a bug or troubleshooting request, **always load `forensic-bisect` first**.
+Route the Worker to bisect at system boundaries before reading code.
+
+```
+PM: S-level bug → load forensic-bisect → Coder uses bisect methodology
+PM: M/L bug in existing module → load forensic-bisect for Architect analysis
+```

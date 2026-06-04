@@ -132,6 +132,23 @@ Supervisor ──→ PM judges L-level, pulls BA
 
 ## Worker Dispatch Protocol
 
+### Pre-Dispatch: Skill Scouting
+
+Before dispatching ANY Worker, run `skill-scout` to match the task + project context
+to the most relevant skills. Load 3-5 matched skills into the Worker's context.
+
+```
+PM: "Dispatch Coder to fix auth token expiry"
+  → skill-scout matches: coding-standards, security-review, desktop-app-secrets
+  → PM loads these skills before dispatching Coder
+```
+
+This prevents Workers from operating without domain knowledge.
+
+---
+
+## Worker Dispatch Protocol
+
 When pulling a worker, assemble the prompt with these 5 sections:
 
 ```
@@ -397,6 +414,23 @@ When user invokes `/crewkit:init` or asks to set up crewkit:
    - `templates/memory/` → project `memory/`
 3. Append crewkit entries to `.gitignore` (don't overwrite existing)
 4. Report what was created and say: "crewkit ready. Describe your feature and I'll judge the scope."
+
+## CLAUDE.md Size Discipline
+
+**CRITICAL**: Project root `CLAUDE.md` / `AGENTS.md` should be **<2KB**.
+
+The full crewkit workflow lives in the crewkit SKILL.md (loaded on demand).
+Project CLAUDE.md should contain ONLY:
+- Project name + one-line description
+- Tech stack keywords (for skill-scout matching)
+- Directory structure overview
+- 2-3 coding conventions
+
+**Why**: Large project context files bloat system prompt by 5-15K tokens,
+slowing down every single conversation — including simple bug fixes.
+DeepSeek v4-pro (no prompt caching) is especially sensitive to this.
+
+---
 
 ## Core Reminders
 
