@@ -7,6 +7,62 @@
 
 ---
 
+## 为什么是 SKILL 而不是 CLAUDE.md
+
+### 按需加载，不常驻上下文
+
+如果把 crewkit 完整流程（角色定义、Quality Gates、Dispatch Protocol、Anti-Deadlock 等）全塞进项目根目录 `CLAUDE.md`，每次会话自动注入 6,000+ tokens 的流程文档。
+
+排查一个 API 报错时，这些用不上。但 LLM 每轮都得先读完。
+
+SKILL 模式：
+- `CLAUDE.md` 只放 2KB 的项目简介 + 一句话「开发走 crewkit 流程」
+- 用户说「实现一个新功能」→ LLM 识别 → 加载 crewkit SKILL → 完整的 PM 流水线
+- 用户说「排查 405 错误」→ 不加载 crewkit → 6,000 tokens 省了
+
+### 跨项目复用
+
+SKILL 装在 `~/.claude/skills/` 或 `~/.hermes/skills/`，所有项目共享。不需要每个项目复制粘贴一份 25KB 的流程文档。
+
+### 可组合
+
+SKILL 不是孤立的。crewkit 可以和 `forensic-bisect`（排查时用）、`skill-scout`（派 Worker 前自动匹配技能）、`desktop-app-secrets`（Electron 安全）组合加载。CLAUDE.md 做不到按场景动态组合。
+
+---
+
+## 为什么用 crewkit
+
+### 1. 角色分化，产出具体落地
+单人开发时容易"想一步做一步"。crewkit 把开发拆成 PM/BA/Architect/UX/Coder/Tester 六个角色，每个角色产出独立文档——需求澄清、架构方案、交互设计、测试用例——不再是"代码写了就行"。
+
+### 2. 文档成长链路
+`docs/` + `memory/` 双目录驱动项目演进：
+- `docs/ba/` → 需求澄清记录
+- `docs/architect/` → 技术方案 + 候选方案对比
+- `docs/tester/` → 用例矩阵 + 回归清单
+- `memory/roles/` → 每个角色跨会话积累经验
+新成员接手时不再是"看代码猜业务"，而是"读文档理解设计"。
+
+### 3. 快照式会话启动
+每个新会话，PM 先检查 `docs/pm/from-*/`（Worker 完成通知）+ `memory/session/current-state.md`。三行状态表代替半小时代码扫描，进来就知道"上次做到哪了、这棒该谁接"。
+
+### 4. 防猜修机制
+Coder 必须有 Architect 方案才能动手，Tester 必须有 UX 交互文档才能写用例。Quality Gates 强制先想清楚再写代码——堵死了单人开发最大的坑：看到 bug 直接改、看到需求直接写。
+
+### 5. 上下文预算管理
+每个 Worker 只看自己那段——BA 看需求、Architect 看接口边界、Coder 看方案输出。不会出现"一个会话塞 50KB 上下文然后 LLM 注意力涣散"的问题。DeepSeek v4-pro 这种无 prompt caching 的模型尤其受益。
+
+### 6. 强制结构化思维
+crewkit 本质是一场思维体操。BA 阶段逼你问"用户到底要什么"，Architect 阶段逼你列"至少两个候选方案"，Tester 阶段逼你写"失败场景+边界条件"。没有这个框架，大多数人会跳过这些，直奔代码。
+
+### 7. 决策审计链
+两周后回来看 `docs/architect/`，能知道"为什么选方案 B 而不是 A"——方案对比矩阵、候选优缺点、推荐理由都在。不只是知道"选了 B"，而是记得"当时的权衡是什么"。
+
+### 8. 委派安全网
+Dispatch Protocol 的五段式 prompt（身份 + 输入 + 产出 + 纪律 + 交付）是防静默失败的保险。子 Agent 不能提问、不能读记忆——prompt 稍有遗漏就产出报废。这个模板确保每个 Worker 得到完整的任务上下文。
+
+---
+
 ## 安装
 
 ```bash

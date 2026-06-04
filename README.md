@@ -9,6 +9,62 @@
 
 ---
 
+## Why a SKILL instead of CLAUDE.md
+
+### Load on Demand, Not Always in Context
+
+If the full crewkit workflow (role definitions, Quality Gates, Dispatch Protocol, Anti-Deadlock) lived in your project's root `CLAUDE.md`, every session would auto-inject 6,000+ tokens of process documentation.
+
+Debugging an API error? Those tokens are wasted. But the LLM still has to read them every turn.
+
+With a SKILL:
+- `CLAUDE.md` stays at 2KB: project intro + one line "use crewkit for features"
+- "Implement a new feature" → LLM recognizes pattern → loads crewkit SKILL → full PM pipeline
+- "Debug a 405 error" → crewkit stays unloaded → 6,000+ tokens saved
+
+### Cross-Project Reusable
+
+Install to `~/.claude/skills/` or `~/.hermes/skills/` once. All projects share it. No copy-paste of 25KB process docs per project.
+
+### Composable
+
+SKILLs aren't isolated. crewkit composes with `forensic-bisect` (for debugging), `skill-scout` (auto-matching skills before dispatching Workers), `desktop-app-secrets` (Electron security). CLAUDE.md can't dynamically combine per scenario.
+
+---
+
+## Why crewkit
+
+### 1. Role Separation, Concrete Deliverables
+Solo developers tend to "think as they code." crewkit splits development into PM/BA/Architect/UX/Coder/Tester — each producing independent documentation: requirements analysis, architecture decisions, interaction designs, test cases. It's no longer "code is the only artifact."
+
+### 2. Document Growth Chain
+`docs/` + `memory/` directories track project evolution:
+- `docs/ba/` → requirements clarification
+- `docs/architect/` → technical proposals + trade-off matrices
+- `docs/tester/` → test case matrices + regression checklists
+- `memory/roles/` → cross-session experience per role
+New team members read documents to understand design, not guess from code.
+
+### 3. Snapshot-Style Session Start
+Every new session, PM checks `docs/pm/from-*/` (Worker completion notices) + `memory/session/current-state.md`. A 3-line status table replaces a 30-minute code scan. You immediately know "where we left off and who's up next."
+
+### 4. Anti-Guess-Fix Mechanism
+Coder requires Architect approval before coding. Tester requires UX documents before writing test cases. Quality Gates enforce "think first, code later" — blocking the #1 solo-dev trap: jumping to code on first impulse.
+
+### 5. Context Budget Management
+Each Worker sees only their slice — BA sees requirements, Architect sees interface boundaries, Coder sees implementation plans. No more "50KB of context in one session causing LLM attention drift." Models without prompt caching (like DeepSeek v4-pro) benefit significantly.
+
+### 6. Enforced Structured Thinking
+crewkit is fundamentally a thinking framework. BA forces you to ask "what does the user actually want?" Architect forces at least two candidate solutions. Tester forces failure scenarios and edge cases. Without this structure, most people skip straight to code.
+
+### 7. Decision Audit Trail
+Two weeks later, `docs/architect/` tells you *why* solution B was chosen over A — trade-off matrices, pros/cons, rationale. You don't just know "we picked B," you remember "what we were weighing at the time."
+
+### 8. Delegation Safety Net
+The 5-part Dispatch Protocol (identity + input + deliverable + discipline + delivery) is insurance against silent failure. Sub-agents can't ask questions or read memory — a single missing detail produces garbage. This template ensures every Worker gets complete task context.
+
+---
+
 ## Installation
 
 ```bash
