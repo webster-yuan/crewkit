@@ -1,4 +1,4 @@
-# crewkit — Multi-Role Agent Collaboration Framework
+﻿# crewkit — Multi-Role Agent Collaboration Framework
 
 > A Claude Code skill that turns the "one agent does everything" anti-pattern into a **Supervisor + PM + 5 specialized Workers** pipeline.
 
@@ -215,7 +215,8 @@ crewkit/                              # ← this repo (skill source)
 │   │   ├── ux/                       #     UX: interaction documents
 │   │   ├── coder/                    #     Coder: implementation plans + debug
 │   │   ├── tester/                   #     Tester: test reports + E2E
-│   │   └── pm/                       #     PM: dispatch protocols + quality gates + inbox
+│   │   ├── pm/                       #     PM: dispatch protocols + quality gates + inbox
+│   │   └── roles/                    #     Tech role definitions (frontend/backend/data/...)
 │   └── memory/                       #   Cross-session role memory system
 │       ├── roles/                    #     Per-worker knowledge accumulation
 │       ├── session/current-state.md  #     Session state recovery

@@ -1,4 +1,4 @@
-# crewkit — 多角色 Agent 协作开发框架
+﻿# crewkit — 多角色 Agent 协作开发框架
 
 > 一个 Claude Code skill，将传统单人 Agent 的"一条龙"拆解为 **Supervisor + PM + 5 个专职 Worker** 的协作流水线。
 
@@ -212,7 +212,8 @@ crewkit/                              # ← 这个 repo (skill 源码)
 │   │   ├── ux/                       #     UX: 用户交互文档
 │   │   ├── coder/                    #     Coder: 实现方案 + 调试记录
 │   │   ├── tester/                   #     Tester: 测试报告 + E2E
-│   │   └── pm/                       #     PM: 调度协议 + 质量门禁 + 收件箱
+│   │   ├── pm/                       #     PM: 调度协议 + 质量门禁 + 收件箱
+│   │   └── roles/                    #     技术角色定义 (前端/后端/数据/...)
 │   └── memory/                       #   跨会话角色记忆系统
 │       ├── roles/                    #     每个 Worker 的知识积累
 │       ├── session/current-state.md  #     会话状态恢复
