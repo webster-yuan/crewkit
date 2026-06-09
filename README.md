@@ -284,6 +284,15 @@ cd crewkit
 # SKILL.md is the main file, templates/ is the scaffold
 ```
 
+
+## Versions
+
+| Version | Init Mode | Init Time | Notes |
+|---------|-----------|-----------|-------|
+| **v0.3.0** | Fast | <1s | Only directory structure + 2 core files |
+| **v0.2.0** | Standard | ~6s | Full templates + references (35 files) |
+| **v0.1.0** | Full | ~15s | Complete copy including memory templates |
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

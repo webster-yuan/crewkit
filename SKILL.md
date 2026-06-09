@@ -1,5 +1,6 @@
 ---
 name: crewkit
+version: 0.3.0
 description: >-
   Multi-role Agent collaboration framework. Use when the user describes a
   feature request, bug fix, or any development task. crewkit makes Claude
@@ -86,17 +87,51 @@ Activate crewkit mode when:
 
 ---
 
-## Project Init
+
+## Project Init (Fast Mode)
 
 When user invokes `/crewkit:init`:
 
-1. Copy template files from skill's `templates/` directory
-2. Create `docs/`, `memory/` structure in project
-3. Update `.gitignore`
-4. Report: "crewkit ready. Describe your feature."
+**极速初始化 - 只创建结构，详情按需加载**
 
----
+1. Create empty directory structure (no file copying):
+   ```
+   docs/
+   ├── ba/
+   ├── architect/
+   ├── ux/
+   ├── coder/
+   ├── tester/
+   ├── pm/
+   │   ├── from-architect/
+   │   ├── from-ba/
+   │   ├── from-coder/
+   │   ├── from-tester/
+   │   └── from-ux/
+   └── roles/
+   
+   memory/
+   ├── roles/
+   ├── session/
+   └── decisions/
+   ```
 
+2. Copy only 2 files:
+   - `templates/CLAUDE.md` → project `CLAUDE.md`
+   - `templates/docs/README.md` → project `docs/README.md`
+
+3. Append to `.gitignore` (don't overwrite):
+   ```
+   memory/
+   docs/pm/from-*
+   ```
+
+4. Report: "crewkit ready (~1s init). Describe your feature."
+
+**Why fast mode?**
+- 35 files → 2 files = <1s initialization
+- Worker details loaded from `templates/references/*.md` on-demand
+- No upfront bloat, lean project structure
 ## CLAUDE.md Size Discipline
 
 **CRITICAL**: Project root `CLAUDE.md` should be **<2KB**.
