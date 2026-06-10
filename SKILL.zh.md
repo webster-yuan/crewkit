@@ -1,6 +1,6 @@
 ---
 name: crewkit
-version: 0.4.0
+version: 0.5.0
 description: >-
   多角色 Agent 协作框架。当用户描述功能需求、Bug 修复或任何开发任务时使用。
   crewkit 让 Claude 扮演 PM 角色——判定变更级别 (S/M/L)、调度 Worker

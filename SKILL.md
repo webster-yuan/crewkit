@@ -1,6 +1,6 @@
 ---
 name: crewkit
-version: 0.4.0
+version: 0.5.0
 description: >-
   Multi-role Agent collaboration framework. Use when the user describes a
   feature request, bug fix, or any development task. crewkit makes Claude
@@ -42,6 +42,34 @@ Activate crewkit mode when:
 | **S** | Bug fix, config, copy tweak. No interface/data/flow changes | PM → Coder → self-test |
 | **M** | New feature on existing module | PM → 1-2 workers → Coder → Tester |
 | **L** | New module, architecture change | Full 7-stage pipeline |
+
+---
+
+## ⚠️  Single vs Multi-Role: When NOT to Split
+
+Multi-role mode sacrifices **context continuity** for role isolation + quality gates.
+Each worker handoff loses micro-decisions and the "why" behind design choices.
+
+**Don't split when:**
+
+| Condition | Why |
+|-----------|-----|
+| The task fits in **one session's context** | One brain with full context > three brains with partial context |
+| Worker would inherit design decisions without understanding the reasoning | Coder sees "chose approach A" but not the discarded alternatives or boundary conditions |
+| PM gate-checking overhead > value of the check | Reading every doc to verify MUST items costs context that could go to implementation |
+
+**Good split (worth it):**
+
+| Condition | Example |
+|-----------|---------|
+| Task too large for one context window | L-level: new module, cross-module refactors |
+| Parallel work reduces wall-clock time | Architect ∥ UX in Phase 2 |
+| Cross-session recovery needed | "I'll design today, implement tomorrow" |
+
+**PM heuristic**: before dispatching multiple workers, ask:
+> "Can one Coder with full context do this faster and better?"
+
+If yes → **S-level it** (PM → Coder → self-test), even if it looks M-level on paper.
 
 ---
 
@@ -112,6 +140,45 @@ Scans the available skill pool and shows which skills are assigned to each Worke
 ### `/crewkit:help` — Quick reference
 
 Displays a cheat sheet with all commands, change level summary, and the Supervisor's 3 actions.
+
+### `/crewkit:review` — Audit undocumented changes
+
+Detects "rogue code" — code changes that bypassed the crewkit document chain. Someone edited files without going through PM → Worker → Gate → doc trail? This command finds them.
+
+**When to run**: after a period of multi-developer work, before a release, or when something "feels off."
+
+**Process**:
+
+```
+1. PM scans git log since last crewkit session:
+   git log --oneline --since="<last documented date>"
+
+2. For each commit, check:
+   - Is it documented? (has a corresponding docs/pm/from-coder/ or docs/pm/from-*/ notice)
+   - Is it a crewkit-initiated change? (commit message references a BA doc or feature name)
+   - Is it infrastructure/config noise? (lockfile bumps, formatting-only, CI config)
+
+3. Classify each undocumented change:
+
+   | Classification | Criteria | Action |
+   |---------------|----------|--------|
+   | **Rogue** | Code logic change with no docs/pm/from-*/ entry and no BA/Architect reference | Flag for PM review — may need retroactive docs |
+   | **Harmless noise** | Lockfile only, formatting-only, CI config | Skip |
+   | **Emergency fix** | Hotfix or prod patch (commit message says so) | Accept but create post-hoc docs/pm/from-coder/ notice |
+
+4. Generate a review report in `docs/pm/from-review/<date>-audit.md`:
+
+   | File | Commit | Author | Classification | Action Needed |
+   |------|--------|--------|---------------|---------------|
+   | src/auth.ts | a1b2c3d | Zhang | Rogue | Retro BA doc or revert |
+   | package-lock.json | e4f5g6h | CI bot | Harmless noise | Skip |
+   | src/hotfix.ts | i7j8k9l | Li | Emergency fix | Accept, write post-hoc notice |
+
+5. PM presents report to Supervisor with recommended actions:
+   - "3 rogue changes found. Accept and retro-doc? Revert? Discuss with author?"
+```
+
+**PM heuristic**: a clean project has zero rogue entries. Every non-noise code change should trace back to a `docs/` entry. Run `/crewkit:review` before every release — it's the last line of defense against undocumented code drift.
 
 ---
 

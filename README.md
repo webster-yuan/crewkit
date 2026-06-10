@@ -9,6 +9,25 @@
 
 ---
 
+## 🧭 Before You Start: What Should I Use?
+
+> Read this table **before** opening Claude Code.
+
+| Your Task | Recommended | Why |
+|-----------|------------|-----|
+| Bug fix, config tweak, small change (≤2 files) | **ECC only** | No process discipline needed, skip scheduling overhead |
+| Daily small edits, code inspection | **ECC only** | Lightweight, seatbelt is enough |
+| New feature, clear requirements, moderate scope | **Single session** or **crewkit + Superpowers** | Single session if context fits — it's faster |
+| New module, architecture refactor, cross-module | **crewkit + Superpowers** | Needs document chain + cross-session recovery + audit trail |
+| Vague requirements, need clarification first | **crewkit + Superpowers** | BA phase forces you to figure out what you want |
+| Multi-dev collaboration, need rogue-code detection | **crewkit** | `/crewkit:review` audits undocumented changes |
+
+**No matter what you pick: keep ECC's safety baseline on (but disable Instincts when using crewkit).**
+
+> Why? See [crewkit in the Agent Ecosystem](#crewkit-in-the-agent-ecosystem).
+
+---
+
 ## Why a SKILL instead of CLAUDE.md
 
 ### Load on Demand, Not Always in Context
@@ -62,6 +81,109 @@ Two weeks later, `docs/architect/` tells you *why* solution B was chosen over A 
 
 ### 8. Delegation Safety Net
 The 5-part Dispatch Protocol (identity + input + deliverable + discipline + delivery) is insurance against silent failure. Sub-agents can't ask questions or read memory — a single missing detail produces garbage. This template ensures every Worker gets complete task context.
+
+### 9. Structured Docs > Auto-Compression Summaries
+
+Claude Code auto-compresses context when it approaches the 200K token limit — it summarizes early conversation into a paragraph. The summary keeps *what* happened but drops *why*: micro-decisions, discarded alternatives, boundary reasoning.
+
+crewkit's document chain produces **intentionally structured records** before compression is ever needed:
+
+| | Claude Code Auto-Compression | crewkit Document Chain |
+|---|---|---|
+| When | Triggered automatically (near limit) | Produced proactively per phase |
+| What survives | Brief conclusion summary | Trade-off matrices, pros/cons, rationale, MUST gate results |
+| Why lost | Discarded alternatives, micro-decisions | Explicitly required (Architect must list ≥2 candidates) |
+| Recovery | Can't replay lost reasoning | Full document trail — read `docs/architect/` to see every decision |
+
+For L-level tasks that would trigger auto-compression, crewkit's documents are the difference between "we picked solution B" and "we picked B after ruling out A (too slow for >10K users) and C (team unfamiliar)." That second sentence is what prevents wrong decisions three sessions later.
+
+---
+
+## Known Limitations
+
+### Role Weight Conflict: crewkit vs Claude Code Built-in Agents
+
+crewkit's role definitions live in the **Skill layer (prompt layer)**. Claude Code's built-in agents (e.g., `code-explorer`, `plan-agent`) live in the **infrastructure layer**. There is no weight declaration mechanism between them.
+
+```
+crewkit:     PM dispatches Architect for technical research
+                 ↓ CONFLICT
+Claude Code:  Auto-triggers code-explorer to search the codebase
+```
+
+**Symptom**: During the Architect phase, code-explorer may bypass PM and intervene directly. Two agents do the same work, potentially producing inconsistent results.
+
+**Why we can't fix it**:
+- **Soft constraint** (prompt hints, CLAUDE.md rules) → just suggestions, zero enforcement
+- **Hard constraint** (disable auto-subagents) → cripples Claude Code's core capabilities
+
+This is a fundamental limitation of the Skill layer: crewkit can only **suggest** what Claude should do, not **prevent** Claude Code's runtime behavior.
+
+**Current mitigation**: PM adds an extra gate-check after each Worker completes: "Did any built-in agent interfere?" If yes, record it in the Worker's memory.
+
+---
+
+## crewkit in the Agent Ecosystem
+
+### ECC vs crewkit: Prevent Mistakes vs Ensure Correctness
+
+| | ECC | crewkit + Superpowers |
+|---|---|---|
+| **Goal** | Prevent Agent **errors** | Ensure Agent **gets it right** |
+| **Mechanism** | Safety guardrails (Hooks, Instincts, Security) | Process discipline (PM dispatch, Quality Gates, document chain) |
+| **Metaphor** | Seatbelt — wear it every drive | Navigation — use it for unfamiliar routes |
+| **Best for** | Daily tweaks, bug fixes, code inspection | New modules, architecture refactors, vague requirements, cross-session tasks |
+| **Attitude to Agent** | "Don't delete things recklessly" | "Think before you act" |
+
+**They are complementary, not competing.** ECC prevents Agent from doing damage. crewkit ensures Agent produces high-quality output.
+
+### Why ECC + crewkit Conflict When Stacked Directly
+
+ECC and crewkit are **two schedulers** with no interoperability protocol:
+
+```
+ECC Instincts intercept tool calls
+  → crewkit Workers can't respond to hooks
+    → Pipeline deadlocks
+
+ECC auto-loads Skills
+  → crewkit Worker context gets polluted
+    → Role isolation design breaks
+
+ECC Memory vs crewkit Memory
+  → Two systems don't know about each other
+    → Knowledge fragmentation
+```
+
+**Conclusion**: Running ECC + crewkit simultaneously weakens both, not strengthens.
+
+### Best Combo: crewkit + Superpowers (Zero Conflict)
+
+```
+crewkit (scheduling layer)  — PM decides who does what, with which skills
+Superpowers (skill layer)   — Passive skill library; crewkit picks what to use
+Claude Code (runtime)       — Executes without extra scheduling
+```
+
+**Why Superpowers fits crewkit perfectly**:
+- ❌ No Hooks/Instincts → doesn't intercept Worker operations
+- ❌ No auto-Skill injection → doesn't pollute Worker context
+- ❌ No independent Memory → doesn't fragment knowledge
+- ✅ Pure skill collection → crewkit's Dynamic Skill Discovery pulls directly from Superpowers
+
+### When to Use What
+
+| Scenario | Recommended | Why |
+|----------|------------|-----|
+| S-level (bug fix, config) | **ECC only** | No process discipline needed, seatbelt is enough |
+| Daily small changes | **ECC only** | Lightweight, no scheduling overhead |
+| M-level (new feature, clear requirements) | **crewkit + Superpowers** or **single session** | Prefer single session if context fits |
+| L-level (new module, architecture refactor) | **crewkit + Superpowers** | Needs document chain, cross-session, audit trail |
+| Any scenario | **ECC always on** (safety baseline) | But disable Instincts when crewkit is active |
+
+### In One Line
+
+> **ECC is the seatbelt — wear it every drive. crewkit is the GPS — turn it on for unfamiliar roads. Superpowers is the map data — the GPS pulls from it when needed.**
 
 ---
 
